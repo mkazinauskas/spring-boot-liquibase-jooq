@@ -1,17 +1,29 @@
 buildscript {
-	ext {
-		springBootVersion = '1.5.9.RELEASE'
-	}
-	repositories {
-		mavenCentral()
-	}
-	dependencies {
-		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
-	}
+    ext {
+        springBootVersion = '1.5.9.RELEASE'
+    }
+    repositories {
+        mavenCentral()
+        maven {
+            url 'https://plugins.gradle.org/m2/'
+        }
+    }
+    dependencies {
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}"
+
+        classpath 'nu.studer:gradle-jooq-plugin:2.0.9'
+
+        classpath 'org.liquibase:liquibase-core:3.4.1'
+        classpath 'org.liquibase:liquibase-gradle-plugin:1.1.1'
+        classpath 'org.yaml:snakeyaml:1.17'
+
+        classpath 'com.h2database:h2:1.4.196'
+    }
 }
 
+apply plugin: 'nu.studer.jooq'
+apply plugin: 'liquibase'
 apply plugin: 'java'
-apply plugin: 'eclipse'
 apply plugin: 'org.springframework.boot'
 
 group = 'com.modzo'
@@ -19,11 +31,60 @@ version = '0.0.1-SNAPSHOT'
 sourceCompatibility = 1.8
 
 repositories {
-	mavenCentral()
+    mavenCentral()
 }
-
 
 dependencies {
-	compile('org.springframework.boot:spring-boot-starter-jooq')
-	testCompile('org.springframework.boot:spring-boot-starter-test')
+    compile 'org.springframework.boot:spring-boot-starter-jooq'
+    compile 'org.liquibase:liquibase-core'
+    runtime 'com.h2database:h2'
+
+    jooqRuntime 'com.h2database:h2'
+
+    compile 'org.jooq:jooq'
+
+    testCompile 'org.springframework.boot:spring-boot-starter-test'
 }
+
+ext {
+    dbUrl = "jdbc:h2:$projectDir/build/jooq-db/generated-db"
+    dbUsername = 'sa'
+    dbPassword = ''
+}
+
+liquibase {
+    activities {
+        main {
+            changeLogFile "$projectDir/src/main/resources/db/changelog/db.changelog-master.yaml"
+            url dbUrl
+            username dbUsername
+            password dbPassword
+        }
+    }
+}
+
+jooq {
+    version = '3.10.1'
+    edition = 'OSS'
+    sample(sourceSets.main) {
+        jdbc {
+            driver = 'org.h2.Driver'
+            url = dbUrl
+            user = dbUsername
+            password = dbPassword
+        }
+        generator {
+            name = 'org.jooq.util.DefaultGenerator'
+            database {
+                name = 'org.jooq.util.h2.H2Database'
+                includes = '.*'
+                excludes = ''
+            }
+            target {
+                packageName = 'nu.studer.sample'
+            }
+        }
+    }
+}
+
+project.tasks.getByName('generateSampleJooqSchemaSource').dependsOn += 'update'
