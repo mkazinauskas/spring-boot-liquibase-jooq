@@ -77,7 +77,7 @@ jooq {
             name = 'org.jooq.util.DefaultGenerator'
             database {
                 name = 'org.jooq.util.h2.H2Database'
-                includes = '.*'
+                includes = 'public.*'
                 excludes = ''
             }
             target {
